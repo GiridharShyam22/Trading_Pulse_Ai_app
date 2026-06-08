@@ -126,9 +126,9 @@ async function startServer() {
     const existingAdmin = await User.findOne({ role: "admin" });
     if (!existingAdmin) {
       const adminUser = await User.create({
-        username: "admin",
-        email: "admin@tradingpulse.com",
-        password: "admin123",
+        username: "GIRIDHAR SHYAM",
+        email: "giridharsyamsamsani@gmail.com",
+        password: "GIRI@2006",
         role: "admin",
         balance: 100000,
         portfolio: new Map(),
