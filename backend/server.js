@@ -31,7 +31,7 @@ app.use(
       "http://localhost:5173",
       "http://localhost:3000",
       "http://127.0.0.1:5173",
-      "https://trading-pulse-ai-7fhs5hui8-giridharshyam22s-projects.vercel.app"
+      "https://trading-pulse-ai-app.vercel.app"
     ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
@@ -47,7 +47,7 @@ const io = new SocketIOServer(server, {
       "http://localhost:5173",
       "http://localhost:3000",
       "http://127.0.0.1:5173",
-      "https://trading-pulse-ai-7fhs5hui8-giridharshyam22s-projects.vercel.app",
+      "https://trading-pulse-ai-app.vercel.app"
     ],
     methods: ["GET", "POST"],
     credentials: true,
