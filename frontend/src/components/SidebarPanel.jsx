@@ -30,7 +30,7 @@ import {
   Tooltip as RechartsTooltip,
 } from 'recharts';
 
-const API = 'http://localhost:5005';
+const API = 'https://trading-pulse-backend.onrender.com';
 
 /* ── Reusable stat row ───────────────────────────────────────── */
 function StatRow({ label, value, valueColor }) {
@@ -163,16 +163,16 @@ export default function SidebarPanel({
   };
 
   /* ── AI data ─────────────────────────────────────────────── */
-  const anomaly  = aiPrediction?.anomaly_detected === true;
-  const trend    = aiPrediction?.trend_prediction || 'neutral';
+  const anomaly = aiPrediction?.anomaly_detected === true;
+  const trend = aiPrediction?.trend_prediction || 'neutral';
   const confidence = aiPrediction?.confidence || 0;
-  const td       = aiPrediction?.details?.trend || {};
-  const ad       = aiPrediction?.details?.anomaly || {};
+  const td = aiPrediction?.details?.trend || {};
+  const ad = aiPrediction?.details?.anomaly || {};
 
   const trendCfg = {
-    bullish: { Icon: TrendingUp,   label: 'Bullish',  color: 'var(--accent-green)', bg: 'rgba(5,150,105,0.08)', border: 'rgba(5,150,105,0.2)' },
-    bearish: { Icon: TrendingDown, label: 'Bearish',  color: 'var(--accent-red)',             bg: 'rgba(190,18,60,0.08)',  border: 'rgba(190,18,60,0.2)' },
-    neutral: { Icon: Minus,        label: 'Neutral',  color: 'var(--accent-amber)', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
+    bullish: { Icon: TrendingUp, label: 'Bullish', color: 'var(--accent-green)', bg: 'rgba(5,150,105,0.08)', border: 'rgba(5,150,105,0.2)' },
+    bearish: { Icon: TrendingDown, label: 'Bearish', color: 'var(--accent-red)', bg: 'rgba(190,18,60,0.08)', border: 'rgba(190,18,60,0.2)' },
+    neutral: { Icon: Minus, label: 'Neutral', color: 'var(--accent-amber)', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
   };
   const tCfg = trendCfg[trend] || trendCfg.neutral;
 
@@ -200,9 +200,9 @@ export default function SidebarPanel({
     let wins = 0;
     sells.forEach(s => {
       // Find the closest preceding buy order for the same symbol
-      const buys = transactions.filter(t => 
-        t.type === 'buy' && 
-        t.symbol === s.symbol && 
+      const buys = transactions.filter(t =>
+        t.type === 'buy' &&
+        t.symbol === s.symbol &&
         new Date(t.createdAt || t.timestamp) < new Date(s.createdAt || s.timestamp)
       );
       if (buys.length > 0) {
@@ -215,8 +215,8 @@ export default function SidebarPanel({
   }, [transactions]);
 
   const totalReturn = useMemo(() => {
-    const currentEquity = equityHistory.length > 0 
-      ? equityHistory[equityHistory.length - 1].equity 
+    const currentEquity = equityHistory.length > 0
+      ? equityHistory[equityHistory.length - 1].equity
       : balance + activePositions.reduce((sum, [sym, pos]) => sum + pos.quantity * (currentPrices[sym]?.price || pos.avgPrice), 0);
     const retVal = ((currentEquity - 100000) / 100000) * 100;
     return `${retVal >= 0 ? '+' : ''}${retVal.toFixed(2)}%`;
@@ -257,7 +257,7 @@ export default function SidebarPanel({
       }}>
         {[
           { id: 'trade', Icon: ShoppingCart, label: 'Execute' },
-          { id: 'ai',    Icon: Brain,        label: 'AI Insights' },
+          { id: 'ai', Icon: Brain, label: 'AI Insights' },
           { id: 'portfolio', Icon: Briefcase, label: 'Portfolio' },
         ].map(({ id, Icon, label }) => {
           const active = tab === id;
@@ -308,15 +308,15 @@ export default function SidebarPanel({
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.04em' }}>⚠️ LIQUIDATION TRIGGERED</span>
-                  <button 
-                    onClick={() => setLiquidationAlert(null)} 
+                  <button
+                    onClick={() => setLiquidationAlert(null)}
                     style={{ border: 'none', background: 'transparent', color: 'var(--accent-amber)', cursor: 'pointer', fontSize: '11px', fontWeight: 800 }}
                   >
                     ✕
                   </button>
                 </div>
                 <span style={{ fontSize: '11px', lineHeight: 1.4 }}>
-                  Your {liquidationAlert.quantity} {liquidationAlert.symbol.replace('USDT','')} position was closed automatically via {liquidationAlert.type === 'stopLoss' ? 'Stop-Loss' : 'Take-Profit'} at <strong>₹{liquidationAlert.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>.
+                  Your {liquidationAlert.quantity} {liquidationAlert.symbol.replace('USDT', '')} position was closed automatically via {liquidationAlert.type === 'stopLoss' ? 'Stop-Loss' : 'Take-Profit'} at <strong>₹{liquidationAlert.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>.
                 </span>
               </div>
             )}
@@ -479,7 +479,7 @@ export default function SidebarPanel({
                   boxShadow: '0 0 20px rgba(5,150,105,0.1)',
                   fontFamily: 'Inter, sans-serif',
                 }}
-                onMouseEnter={e => { if (!busy) { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(5,150,105,0.25), rgba(5,150,105,0.15))'; e.currentTarget.style.boxShadow = '0 0 30px rgba(5,150,105,0.2)'; }}}
+                onMouseEnter={e => { if (!busy) { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(5,150,105,0.25), rgba(5,150,105,0.15))'; e.currentTarget.style.boxShadow = '0 0 30px rgba(5,150,105,0.2)'; } }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(5,150,105,0.15), rgba(5,150,105,0.08))'; e.currentTarget.style.boxShadow = '0 0 20px rgba(5,150,105,0.1)'; }}
               >
                 {busy ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <ArrowUp size={16} />}
@@ -506,7 +506,7 @@ export default function SidebarPanel({
                   boxShadow: '0 0 20px rgba(190,18,60,0.1)',
                   fontFamily: 'Inter, sans-serif',
                 }}
-                onMouseEnter={e => { if (!busy) { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(190,18,60,0.25), rgba(190,18,60,0.15))'; e.currentTarget.style.boxShadow = '0 0 30px rgba(190,18,60,0.2)'; }}}
+                onMouseEnter={e => { if (!busy) { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(190,18,60,0.25), rgba(190,18,60,0.15))'; e.currentTarget.style.boxShadow = '0 0 30px rgba(190,18,60,0.2)'; } }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(190,18,60,0.15), rgba(190,18,60,0.08))'; e.currentTarget.style.boxShadow = '0 0 20px rgba(190,18,60,0.1)'; }}
               >
                 {busy ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <ArrowDown size={16} />}
@@ -526,7 +526,7 @@ export default function SidebarPanel({
               }}>
                 {msg.ok
                   ? <CheckCircle size={18} style={{ flexShrink: 0, marginTop: '1px' }} />
-                  : <XCircle    size={18} style={{ flexShrink: 0, marginTop: '1px' }} />}
+                  : <XCircle size={18} style={{ flexShrink: 0, marginTop: '1px' }} />}
                 <span style={{ fontSize: '13px', fontWeight: 600, lineHeight: 1.4 }}>{msg.text}</span>
               </div>
             )}
@@ -695,7 +695,7 @@ export default function SidebarPanel({
                       value={td.ma_crossover_signal?.toUpperCase() || '—'}
                       valueColor={
                         td.ma_crossover_signal === 'bullish' ? 'var(--accent-green)' :
-                        td.ma_crossover_signal === 'bearish' ? 'var(--accent-red)' : 'var(--accent-amber)'
+                          td.ma_crossover_signal === 'bearish' ? 'var(--accent-red)' : 'var(--accent-amber)'
                       }
                     />
                     <StatRow
@@ -888,7 +888,7 @@ export default function SidebarPanel({
                   background: 'rgba(255,255,255,0.01)',
                   textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px'
                 }}>
-                  No open positions.<br/>Select an asset and execute trades to start.
+                  No open positions.<br />Select an asset and execute trades to start.
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Zap, Mail, Lock, User, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
 
-const BACKEND = 'http://localhost:5005';
+const BACKEND = 'https://trading-pulse-backend.onrender.com';
 
 export default function AuthScreen({ onAuthSuccess }) {
   const [mode, setMode] = useState('login'); // 'login' | 'signup'

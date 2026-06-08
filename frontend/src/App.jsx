@@ -7,8 +7,8 @@ import AuthScreen from './components/AuthScreen';
 import AdminDashboard from './components/AdminDashboard';
 import { Zap, Wifi, WifiOff, Wallet, TrendingUp, Search, LogOut, User, Shield, LayoutDashboard } from 'lucide-react';
 
-const AI_URL = 'http://localhost:8000';
-const BACKEND = 'http://localhost:5005';
+const BACKEND = "https://trading-pulse-backend.onrender.com";
+const AI_URL = 'https://trading-pulse-ai-app.onrender.com';
 const MAX_HIST = 50;
 const AI_INTERVAL = 10;
 
@@ -135,12 +135,12 @@ function TradingDashboard({ authUser, setAuthUser, authToken, onLogout }) {
           setEquityHistory(r.data.data.equityHistory || []);
           setFundRequested(r.data.data.fundRequested || false);
           setBalOk(true);
-          
+
           // Sync role and other details back to parent and localStorage
           if (r.data.data.role !== authUser?.role) {
-             const updatedUser = { ...authUser, ...r.data.data };
-             setAuthUser(updatedUser);
-             localStorage.setItem('tradingpulse_user', JSON.stringify(updatedUser));
+            const updatedUser = { ...authUser, ...r.data.data };
+            setAuthUser(updatedUser);
+            localStorage.setItem('tradingpulse_user', JSON.stringify(updatedUser));
           }
         }
       } catch (e) {
@@ -649,45 +649,45 @@ function TradingDashboard({ authUser, setAuthUser, authToken, onLogout }) {
           {/* ── Chart Panel ────────────────────────────────────── */}
           <section
             className="panel-shadow"
-          style={{
-            flex: 1,
-            minWidth: 0,
-            borderRadius: '16px',
-            background: 'var(--bg-panel)',
-            border: '1px solid rgba(255,255,255,0.07)',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            padding: '24px',
-          }}
-        >
-          <MarketChart priceData={history[asset]} symbol={asset} />
-        </section>
+            style={{
+              flex: 1,
+              minWidth: 0,
+              borderRadius: '16px',
+              background: 'var(--bg-panel)',
+              border: '1px solid rgba(255,255,255,0.07)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '24px',
+            }}
+          >
+            <MarketChart priceData={history[asset]} symbol={asset} />
+          </section>
 
-        {/* ── Sidebar Panel ─────────────────────────────────── */}
-        <aside style={{ width: '380px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
-          <SidebarPanel
-            userId={userId}
-            authToken={authToken}
-            activeAsset={asset}
-            currentPrices={latest}
-            balance={balance}
-            portfolio={portfolio}
-            transactions={transactions}
-            equityHistory={equityHistory}
-            fundRequested={fundRequested}
-            setFundRequested={setFundRequested}
-            news={news}
-            liquidationAlert={liquidationAlert}
-            setLiquidationAlert={setLiquidationAlert}
-            onTradeComplete={onTrade}
-            aiPrediction={pred}
-            aiLoading={aiLoad}
-            aiConnected={aiUp}
-            aiLastUpdated={aiTs}
-          />
-        </aside>
-      </main>
+          {/* ── Sidebar Panel ─────────────────────────────────── */}
+          <aside style={{ width: '380px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+            <SidebarPanel
+              userId={userId}
+              authToken={authToken}
+              activeAsset={asset}
+              currentPrices={latest}
+              balance={balance}
+              portfolio={portfolio}
+              transactions={transactions}
+              equityHistory={equityHistory}
+              fundRequested={fundRequested}
+              setFundRequested={setFundRequested}
+              news={news}
+              liquidationAlert={liquidationAlert}
+              setLiquidationAlert={setLiquidationAlert}
+              onTradeComplete={onTrade}
+              aiPrediction={pred}
+              aiLoading={aiLoad}
+              aiConnected={aiUp}
+              aiLastUpdated={aiTs}
+            />
+          </aside>
+        </main>
       )}
     </div>
   );

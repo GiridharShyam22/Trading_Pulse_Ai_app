@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Users, IndianRupee, RefreshCw, Shield, Clock, Mail, AlertCircle, CheckCircle2 } from 'lucide-react';
 
-const BACKEND = 'http://localhost:5005';
+const BACKEND = 'https://trading-pulse-backend.onrender.com';
 
 export default function AdminDashboard({ authToken }) {
   const [users, setUsers] = useState([]);
@@ -114,7 +114,7 @@ export default function AdminDashboard({ authToken }) {
             cursor: loading ? 'not-allowed' : 'pointer',
             transition: 'all 0.2s',
           }}
-          onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#e2e8f0'; }}}
+          onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#e2e8f0'; } }}
           onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#94a3b8'; }}
         >
           <RefreshCw size={14} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
@@ -350,15 +350,15 @@ export default function AdminDashboard({ authToken }) {
                       whiteSpace: 'nowrap',
                       boxShadow: user.fundRequested ? '0 0 10px rgba(59,130,246,0.2)' : 'none',
                     }}
-                    onMouseEnter={e => { 
-                      if (fundingUser !== user._id) { 
-                        e.currentTarget.style.background = user.fundRequested ? 'rgba(59,130,246,0.25)' : 'rgba(5,150,105,0.12)'; 
-                        e.currentTarget.style.borderColor = user.fundRequested ? 'rgba(59,130,246,0.6)' : 'rgba(5,150,105,0.35)'; 
+                    onMouseEnter={e => {
+                      if (fundingUser !== user._id) {
+                        e.currentTarget.style.background = user.fundRequested ? 'rgba(59,130,246,0.25)' : 'rgba(5,150,105,0.12)';
+                        e.currentTarget.style.borderColor = user.fundRequested ? 'rgba(59,130,246,0.6)' : 'rgba(5,150,105,0.35)';
                       }
                     }}
-                    onMouseLeave={e => { 
-                      e.currentTarget.style.background = user.fundRequested ? 'rgba(59,130,246,0.15)' : 'rgba(5,150,105,0.06)'; 
-                        e.currentTarget.style.borderColor = user.fundRequested ? 'rgba(59,130,246,0.4)' : 'rgba(5,150,105,0.2)'; 
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = user.fundRequested ? 'rgba(59,130,246,0.15)' : 'rgba(5,150,105,0.06)';
+                      e.currentTarget.style.borderColor = user.fundRequested ? 'rgba(59,130,246,0.4)' : 'rgba(5,150,105,0.2)';
                     }}
                   >
                     {fundingUser === user._id ? (

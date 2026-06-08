@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = 'http://localhost:5005';
+const SOCKET_URL = 'https://trading-pulse-backend.onrender.com';
 
 const socket = io(SOCKET_URL, {
   transports: ['websocket', 'polling'],
