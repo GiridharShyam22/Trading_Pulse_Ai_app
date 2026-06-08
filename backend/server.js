@@ -28,9 +28,10 @@ const server = http.createServer(app);
 app.use(
   cors({
     origin: [
-      "http://localhost:5173", // Vite dev server
+      "http://localhost:5173",
       "http://localhost:3000",
       "http://127.0.0.1:5173",
+      "https://trading-pulse-ai-7fhs5hui8-giridharshyam22s-projects.vercel.app"
     ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
@@ -46,6 +47,7 @@ const io = new SocketIOServer(server, {
       "http://localhost:5173",
       "http://localhost:3000",
       "http://127.0.0.1:5173",
+      "https://trading-pulse-ai-7fhs5hui8-giridharshyam22s-projects.vercel.app",
     ],
     methods: ["GET", "POST"],
     credentials: true,
