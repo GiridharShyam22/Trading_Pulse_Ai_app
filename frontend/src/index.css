@@ -1,0 +1,169 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+
+/* ── Base Reset ──────────────────────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-base:       #09090b; /* zinc-950 */
+  --bg-surface:    #18181b; /* zinc-900 */
+  --bg-elevated:   #27272a; /* zinc-800 */
+  --bg-panel:      #09090b; /* zinc-950 */
+  --border-subtle: rgba(255,255,255,0.05);
+  --border-muted:  #27272a; /* zinc-800 */
+  --border-accent: rgba(59,130,246,0.25);
+  --accent-blue:   #3b82f6;
+  --accent-cyan:   #06b6d4;
+  --accent-green:  rgba(5, 150, 105, 0.8); /* emerald-600/80 */
+  --accent-red:    rgba(190, 18, 60, 0.8); /* rose-700/80 */
+  --accent-amber:  #d97706;
+  --text-primary:  #f4f4f5; /* zinc-100 */
+  --text-muted:    #a1a1aa; /* zinc-400 */
+  --text-faint:    #52525b; /* zinc-600 */
+  --glow-blue:     0 0 40px rgba(59,130,246,0.08);
+  --glow-green:    0 0 40px rgba(5,150,105,0.08);
+  --glow-red:      0 0 40px rgba(190,18,60,0.08);
+}
+
+html {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 16px;
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(100,116,139,0.3); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,0.5); }
+
+/* ── Mono numbers ──────────────────────────────────────────── */
+.mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+
+/* ── Glass panel ───────────────────────────────────────────── */
+.glass {
+  background: rgba(13,17,23,0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+}
+
+.glass-bright {
+  background: rgba(17,24,39,0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-muted);
+}
+
+/* ── Skeleton ───────────────────────────────────────────────── */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.04; }
+  50%       { opacity: 0.10; }
+}
+.skel {
+  background: #94a3b8;
+  border-radius: 8px;
+  animation: skeleton-pulse 1.8s ease-in-out infinite;
+}
+
+/* ── Chart Skeleton Wave ───────────────────────────────────── */
+@keyframes chart-wave {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.skel-wave { position: relative; overflow: hidden; }
+.skel-wave::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 20%, rgba(148,163,184,0.05) 50%, transparent 80%);
+  animation: chart-wave 2.5s ease-in-out infinite;
+}
+
+/* ── Glow Pulse (anomaly) ───────────────────────────────────── */
+@keyframes danger-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.25), var(--glow-red); }
+  50%       { box-shadow: 0 0 30px 8px rgba(239,68,68,0.08), var(--glow-red); }
+}
+.anomaly-glow { animation: danger-pulse 2.2s ease-in-out infinite; }
+
+/* ── Enter animation ────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.enter { animation: fadeUp 0.3s ease-out both; }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.fade-in { animation: fadeIn 0.25s ease-out both; }
+
+/* ── Beacon pulse (live dot) ────────────────────────────────── */
+@keyframes beacon {
+  0%   { transform: scale(1); opacity: 0.8; }
+  70%  { transform: scale(2.4); opacity: 0; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+.beacon { position: relative; display: inline-block; }
+.beacon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: inherit;
+  animation: beacon 1.5s cubic-bezier(0,0,0.2,1) infinite;
+}
+
+/* ── Button shimmer ─────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* ── Nav glow line ──────────────────────────────────────────── */
+.nav-glow {
+  box-shadow: 0 1px 0 0 rgba(59,130,246,0.15), 0 0 40px rgba(59,130,246,0.03);
+}
+
+/* ── Panel shadow ───────────────────────────────────────────── */
+.panel-shadow {
+  box-shadow:
+    0 0 0 1px var(--border-subtle),
+    0 4px 6px -1px rgba(0,0,0,0.4),
+    0 20px 40px -10px rgba(0,0,0,0.5);
+}
+
+/* ── Chart area glow ────────────────────────────────────────── */
+.chart-glow-green { box-shadow: inset 0 0 80px rgba(16,185,129,0.04); }
+.chart-glow-red   { box-shadow: inset 0 0 80px rgba(239,68,68,0.04); }
+
+/* ── Tab active indicator ───────────────────────────────────── */
+.tab-active {
+  position: relative;
+  color: #f1f5f9;
+  background: rgba(59,130,246,0.08);
+}
+.tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+  border-radius: 1px;
+}
+
+/* ── Recharts override ──────────────────────────────────────── */
+.recharts-tooltip-wrapper { outline: none !important; }
+.recharts-surface { overflow: visible; }
