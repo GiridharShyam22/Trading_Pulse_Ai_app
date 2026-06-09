@@ -4,89 +4,86 @@ import Transaction from "../models/Transaction.js";
 import { getActiveSentiment } from "./newsService.js";
 
 /**
- * Binance WebSocket Service
+ * Binance WebSocket Service (v2 — On-Demand Architecture)
  *
- * Connects to Binance's live trade streams for BTCUSDT and ETHUSDT.
- * Parses incoming trade data and emits throttled price updates via Socket.io.
- *
- * Binance trade message format:
- * {
- *   "e": "trade",       // Event type
- *   "s": "BTCUSDT",     // Symbol
- *   "p": "67123.45",    // Price (string)
- *   "q": "0.001",       // Quantity (string)
- *   "T": 1625000000000  // Trade time (ms)
- * }
+ * - Connects to Binance live trade streams for crypto pairs.
+ * - Exposes updatePrice() so external services (Finnhub) can feed prices.
+ * - Emits room-based "asset_update" to subscribed clients only.
+ * - Emits lightweight "market_update" (ticker tape) to all clients every 2s.
+ * - Smart memory: 200 ticks for watched symbols, 150 for unwatched.
  */
 
+// ── Symbol Configuration ────────────────────────────────────────
+const SYMBOLS_CONFIG = {
+  // Crypto — real data from Binance WebSocket
+  BTCUSDT:  { basePrice: 67500,   source: "binance" },
+  ETHUSDT:  { basePrice: 3450,    source: "binance" },
+  BNBUSDT:  { basePrice: 600.50,  source: "binance" },
+  SOLUSDT:  { basePrice: 150.25,  source: "binance" },
+
+  // US Stocks — real data from Finnhub (when connected)
+  AAPL:     { basePrice: 185.50,  source: "finnhub" },
+  MSFT:     { basePrice: 415.20,  source: "finnhub" },
+  GOOGL:    { basePrice: 172.30,  source: "finnhub" },
+  AMZN:     { basePrice: 180.10,  source: "finnhub" },
+  TSLA:     { basePrice: 175.40,  source: "finnhub" },
+  NVDA:     { basePrice: 920.80,  source: "finnhub" },
+  META:     { basePrice: 495.60,  source: "finnhub" },
+  NFLX:     { basePrice: 610.15,  source: "finnhub" },
+  AMD:      { basePrice: 160.20,  source: "finnhub" },
+  PLTR:     { basePrice: 22.45,   source: "finnhub" },
+  COIN:     { basePrice: 200.15,  source: "finnhub" },
+
+  // Indian Stocks — simulated (NSE/BSE not available on Finnhub free tier)
+  RELIANCE: { basePrice: 2900.50, source: "simulator" },
+  TCS:      { basePrice: 3800.20, source: "simulator" },
+  HDFCBANK: { basePrice: 1500.10, source: "simulator" },
+  INFY:     { basePrice: 1400.30, source: "simulator" },
+  SBIN:     { basePrice: 800.50,  source: "simulator" },
+};
+
+const ALL_SYMBOLS = Object.keys(SYMBOLS_CONFIG);
+const BINANCE_SYMBOLS = ALL_SYMBOLS.filter(s => SYMBOLS_CONFIG[s].source === "binance");
+const SIMULATOR_SYMBOLS = ALL_SYMBOLS.filter(s => SYMBOLS_CONFIG[s].source === "simulator");
+const FINNHUB_SYMBOLS = ALL_SYMBOLS.filter(s => SYMBOLS_CONFIG[s].source === "finnhub");
+
 const BINANCE_WS_URL =
-  "wss://stream.binance.com:9443/ws/btcusdt@trade/ethusdt@trade/bnbusdt@trade/solusdt@trade";
+  "wss://stream.binance.com:9443/ws/" +
+  BINANCE_SYMBOLS.map(s => s.toLowerCase() + "@trade").join("/");
 
-// In-memory price store for latest prices (crypto + stocks)
-const latestPrices = {
-  BTCUSDT: { price: 0, timestamp: 0, volume24h: 0 },
-  ETHUSDT: { price: 0, timestamp: 0, volume24h: 0 },
-  BNBUSDT: { price: 0, timestamp: 0, volume24h: 0 },
-  SOLUSDT: { price: 0, timestamp: 0, volume24h: 0 },
-  AAPL: { price: 185.50, timestamp: 0, volume24h: 0 },
-  MSFT: { price: 415.20, timestamp: 0, volume24h: 0 },
-  GOOGL: { price: 172.30, timestamp: 0, volume24h: 0 },
-  AMZN: { price: 180.10, timestamp: 0, volume24h: 0 },
-  TSLA: { price: 175.40, timestamp: 0, volume24h: 0 },
-  NVDA: { price: 920.80, timestamp: 0, volume24h: 0 },
-  META: { price: 495.60, timestamp: 0, volume24h: 0 },
-  NFLX: { price: 610.15, timestamp: 0, volume24h: 0 },
-  AMD: { price: 160.20, timestamp: 0, volume24h: 0 },
-  PLTR: { price: 22.45, timestamp: 0, volume24h: 0 },
-  COIN: { price: 200.15, timestamp: 0, volume24h: 0 },
-  RELIANCE: { price: 2900.50, timestamp: 0, volume24h: 0 },
-  TCS: { price: 3800.20, timestamp: 0, volume24h: 0 },
-  HDFCBANK: { price: 1500.10, timestamp: 0, volume24h: 0 },
-  INFY: { price: 1400.30, timestamp: 0, volume24h: 0 },
-  SBIN: { price: 800.50, timestamp: 0, volume24h: 0 },
-};
+// ── In-memory price stores (config-driven) ──────────────────────
+const latestPrices = {};
+const priceHistory = {};
 
-// Price history buffers for AI predictions (kept in memory)
-const priceHistory = {
-  BTCUSDT: [],
-  ETHUSDT: [],
-  BNBUSDT: [],
-  SOLUSDT: [],
-  AAPL: [],
-  MSFT: [],
-  GOOGL: [],
-  AMZN: [],
-  TSLA: [],
-  NVDA: [],
-  META: [],
-  NFLX: [],
-  AMD: [],
-  PLTR: [],
-  COIN: [],
-  RELIANCE: [],
-  TCS: [],
-  HDFCBANK: [],
-  INFY: [],
-  SBIN: [],
-};
+for (const symbol of ALL_SYMBOLS) {
+  latestPrices[symbol] = { price: 0, timestamp: 0, volume24h: 0 };
+  priceHistory[symbol] = [];
+}
 
-const MAX_HISTORY_LENGTH = 200;
-const THROTTLE_INTERVAL_MS = 1000; // Emit at most once per second
+const MAX_HISTORY_WATCHED = 200;
+const MAX_HISTORY_UNWATCHED = 150;
+const TICKER_INTERVAL_MS = 2000;  // Broadcast ticker tape every 2s
+const ROOM_INTERVAL_MS = 1000;    // Room-based updates every 1s
+
+// Track which symbols have active watchers (rooms with clients)
+const activeRooms = new Set();
 
 let ws = null;
 let reconnectTimer = null;
-let throttleTimer = null;
-let pendingEmit = false;
+let tickerTimer = null;
+let roomTimer = null;
+let pendingTicker = false;
 
-/**
- * Pre-populate history with random-walk data to make charts and AI work immediately.
- */
+// Track which symbols received a Finnhub price (fallback to simulator if not)
+const finnhubActive = new Set();
+
+// ── Pre-populate history ────────────────────────────────────────
 function prefillHistory(symbol, basePrice) {
   let currentPrice = basePrice;
-  let timestamp = Date.now() - 150 * 1000; // 150 seconds ago
+  let timestamp = Date.now() - 150 * 1000;
   const history = [];
   for (let i = 0; i < 150; i++) {
-    const change = (Math.random() - 0.5) * 0.005; // max 0.25% change per step for visible candles
+    const change = (Math.random() - 0.5) * 0.005;
     currentPrice = currentPrice * (1 + change);
     history.push({
       price: parseFloat(currentPrice.toFixed(2)),
@@ -99,52 +96,87 @@ function prefillHistory(symbol, basePrice) {
   latestPrices[symbol].timestamp = Date.now();
 }
 
-// Pre-fill history on startup
 function prefillAllHistory() {
-  prefillHistory("BTCUSDT", 67500);
-  prefillHistory("ETHUSDT", 3450);
-  prefillHistory("BNBUSDT", 600.50);
-  prefillHistory("SOLUSDT", 150.25);
-  prefillHistory("AAPL", 185.50);
-  prefillHistory("MSFT", 415.20);
-  prefillHistory("GOOGL", 172.30);
-  prefillHistory("AMZN", 180.10);
-  prefillHistory("TSLA", 175.40);
-  prefillHistory("NVDA", 920.80);
-  prefillHistory("META", 495.60);
-  prefillHistory("NFLX", 610.15);
-  prefillHistory("AMD", 160.20);
-  prefillHistory("PLTR", 22.45);
-  prefillHistory("COIN", 200.15);
-  prefillHistory("RELIANCE", 2900.50);
-  prefillHistory("TCS", 3800.20);
-  prefillHistory("HDFCBANK", 1500.10);
-  prefillHistory("INFY", 1400.30);
-  prefillHistory("SBIN", 800.50);
+  for (const symbol of ALL_SYMBOLS) {
+    prefillHistory(symbol, SYMBOLS_CONFIG[symbol].basePrice);
+  }
 }
 
 prefillAllHistory();
 
-/**
- * Get the latest cached prices (for use by other modules).
- */
+// ── Public API ──────────────────────────────────────────────────
 export function getLatestPrices() {
   return { ...latestPrices };
 }
 
-/**
- * Get the price history buffer for a symbol.
- * @param {string} symbol - e.g. "BTCUSDT"
- * @param {number} count - Number of recent prices to return
- */
 export function getPriceHistory(symbol, count = 50) {
   const history = priceHistory[symbol] || [];
   return history.slice(-count);
 }
 
 /**
- * Scan active user portfolios for crossed Stop-Loss / Take-Profit targets and liquidate.
+ * External price feed (used by Finnhub service).
+ * @param {string} symbol
+ * @param {number} price
+ * @param {number} volume
  */
+export function updatePrice(symbol, price, volume = 1) {
+  if (!latestPrices[symbol]) return;
+
+  const timestamp = Date.now();
+  latestPrices[symbol] = {
+    price,
+    timestamp,
+    volume24h: latestPrices[symbol].volume24h + volume,
+  };
+
+  priceHistory[symbol].push({ price, timestamp, volume });
+
+  // Smart trim based on whether symbol is actively watched
+  const maxLen = activeRooms.has(symbol) ? MAX_HISTORY_WATCHED : MAX_HISTORY_UNWATCHED;
+  if (priceHistory[symbol].length > maxLen) {
+    priceHistory[symbol] = priceHistory[symbol].slice(-maxLen);
+  }
+
+  finnhubActive.add(symbol);
+}
+
+/**
+ * Track a room as active (a client is watching this symbol).
+ */
+export function addActiveRoom(symbol) {
+  activeRooms.add(symbol);
+}
+
+/**
+ * Remove a room from active tracking.
+ */
+export function removeActiveRoom(symbol) {
+  activeRooms.delete(symbol);
+}
+
+/**
+ * Memory stats for debugging on Render.
+ */
+export function getMemoryStats() {
+  let totalTicks = 0;
+  const perSymbol = {};
+  for (const symbol of ALL_SYMBOLS) {
+    const count = (priceHistory[symbol] || []).length;
+    perSymbol[symbol] = count;
+    totalTicks += count;
+  }
+  const memUsage = process.memoryUsage();
+  return {
+    totalTicks,
+    activeRooms: [...activeRooms],
+    perSymbol,
+    heapUsedMB: (memUsage.heapUsed / 1024 / 1024).toFixed(2),
+    rssMB: (memUsage.rss / 1024 / 1024).toFixed(2),
+  };
+}
+
+// ── SL/TP Scanner ───────────────────────────────────────────────
 async function checkSLTP(io) {
   try {
     const users = await User.find({});
@@ -186,7 +218,6 @@ async function checkSLTP(io) {
           user.portfolio.delete(symbol);
           changed = true;
 
-          // Notify client of the liquidation event
           io.emit("order_liquidated", {
             userId: user._id,
             symbol,
@@ -210,7 +241,6 @@ async function checkSLTP(io) {
 
         await user.save();
 
-        // Push full portfolio update to client
         io.emit("portfolio_update", {
           userId: user._id,
           balance: user.balance,
@@ -223,26 +253,40 @@ async function checkSLTP(io) {
   }
 }
 
-/**
- * Initialize the Binance WebSocket connection and wire it to Socket.io.
- * @param {import("socket.io").Server} io - Socket.io server instance
- */
+// ── Main Init ───────────────────────────────────────────────────
 export function initBinanceSocket(io) {
-  function triggerEmit() {
-    if (!pendingEmit) {
-      pendingEmit = true;
-      throttleTimer = setTimeout(() => {
+
+  // ── Ticker tape: lightweight broadcast to ALL clients every 2s ──
+  function triggerTickerEmit() {
+    if (!pendingTicker) {
+      pendingTicker = true;
+      tickerTimer = setTimeout(() => {
         io.emit("market_update", {
           prices: { ...latestPrices },
           timestamp: Date.now(),
         });
-        pendingEmit = false;
-        // Run SL/TP targets scan
+        pendingTicker = false;
         checkSLTP(io);
-      }, THROTTLE_INTERVAL_MS);
+      }, TICKER_INTERVAL_MS);
     }
   }
 
+  // ── Room-based: detailed update to subscribed clients every 1s ──
+  const roomEmitTimer = setInterval(() => {
+    for (const symbol of activeRooms) {
+      const price = latestPrices[symbol];
+      if (!price || price.price <= 0) continue;
+
+      io.to(`room:${symbol}`).emit("asset_update", {
+        symbol,
+        price: price.price,
+        timestamp: price.timestamp || Date.now(),
+        volume24h: price.volume24h,
+      });
+    }
+  }, ROOM_INTERVAL_MS);
+
+  // ── Binance WebSocket ─────────────────────────────────────────
   function connect() {
     console.log("[BinanceWS] Connecting to Binance trade stream...");
 
@@ -250,44 +294,35 @@ export function initBinanceSocket(io) {
 
     ws.on("open", () => {
       console.log("[BinanceWS] ✅ Connected to Binance WebSocket");
-      console.log("[BinanceWS] Streaming: BTCUSDT, ETHUSDT");
+      console.log(`[BinanceWS] Streaming: ${BINANCE_SYMBOLS.join(", ")}`);
     });
 
     ws.on("message", (data) => {
       try {
         const trade = JSON.parse(data.toString());
-
-        // Validate it's a trade event
         if (trade.e !== "trade") return;
 
-        const symbol = trade.s; // e.g. "BTCUSDT"
+        const symbol = trade.s;
         const price = parseFloat(trade.p);
         const quantity = parseFloat(trade.q);
         const timestamp = trade.T;
 
         if (!latestPrices[symbol]) return;
 
-        // Update latest price
         latestPrices[symbol] = {
           price,
           timestamp,
           volume24h: latestPrices[symbol].volume24h + quantity,
         };
 
-        // Append to price history
-        priceHistory[symbol].push({
-          price,
-          timestamp,
-          volume: quantity,
-        });
+        priceHistory[symbol].push({ price, timestamp, volume: quantity });
 
-        // Trim history buffer
-        if (priceHistory[symbol].length > MAX_HISTORY_LENGTH) {
-          priceHistory[symbol] = priceHistory[symbol].slice(-MAX_HISTORY_LENGTH);
+        const maxLen = activeRooms.has(symbol) ? MAX_HISTORY_WATCHED : MAX_HISTORY_UNWATCHED;
+        if (priceHistory[symbol].length > maxLen) {
+          priceHistory[symbol] = priceHistory[symbol].slice(-maxLen);
         }
 
-        // Trigger emit
-        triggerEmit();
+        triggerTickerEmit();
       } catch (error) {
         // Silently ignore malformed messages
       }
@@ -301,27 +336,35 @@ export function initBinanceSocket(io) {
       console.warn(
         `[BinanceWS] ⚠️ Connection closed (code: ${code}). Reconnecting in 5s...`
       );
-      clearTimeout(throttleTimer);
-      pendingEmit = false;
-
-      // Auto-reconnect with backoff
+      clearTimeout(tickerTimer);
+      pendingTicker = false;
       reconnectTimer = setTimeout(connect, 5000);
     });
   }
 
-  // Start the connection
   connect();
 
-  // Stock simulator timer
+  // ── Stock Simulator (Indian stocks + Finnhub fallback) ────────
   const stockSimulatorTimer = setInterval(() => {
-    const stockSymbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX", "AMD", "PLTR", "COIN", "RELIANCE", "TCS", "HDFCBANK", "INFY", "SBIN"];
     const timestamp = Date.now();
 
-    stockSymbols.forEach((symbol) => {
+    // Always simulate Indian stocks
+    const symbolsToSimulate = [...SIMULATOR_SYMBOLS];
+
+    // Also simulate Finnhub stocks that haven't received real data yet
+    for (const s of FINNHUB_SYMBOLS) {
+      if (!finnhubActive.has(s)) {
+        symbolsToSimulate.push(s);
+      }
+    }
+
+    symbolsToSimulate.forEach((symbol) => {
       const current = latestPrices[symbol];
+      if (!current) return;
+
       const sentiment = getActiveSentiment(symbol);
-      const bias = sentiment * 0.001; // sentiment bias up to 0.1%
-      const change = (Math.random() - 0.5) * 0.004 + bias; // max 0.2% change per tick
+      const bias = sentiment * 0.001;
+      const change = (Math.random() - 0.5) * 0.004 + bias;
       const newPrice = parseFloat((current.price * (1 + change)).toFixed(2));
       const volume = Math.floor(Math.random() * 50) + 5;
 
@@ -331,26 +374,23 @@ export function initBinanceSocket(io) {
         volume24h: current.volume24h + volume,
       };
 
-      priceHistory[symbol].push({
-        price: newPrice,
-        timestamp,
-        volume,
-      });
+      priceHistory[symbol].push({ price: newPrice, timestamp, volume });
 
-      if (priceHistory[symbol].length > MAX_HISTORY_LENGTH) {
-        priceHistory[symbol] = priceHistory[symbol].slice(-MAX_HISTORY_LENGTH);
+      const maxLen = activeRooms.has(symbol) ? MAX_HISTORY_WATCHED : MAX_HISTORY_UNWATCHED;
+      if (priceHistory[symbol].length > maxLen) {
+        priceHistory[symbol] = priceHistory[symbol].slice(-maxLen);
       }
     });
 
-    // Trigger emit
-    triggerEmit();
+    triggerTickerEmit();
   }, 1000);
 
-  // Expose a cleanup function
+  // ── Cleanup ───────────────────────────────────────────────────
   return function cleanup() {
     console.log("[BinanceWS + StockSimulator] Shutting down...");
     clearTimeout(reconnectTimer);
-    clearTimeout(throttleTimer);
+    clearTimeout(tickerTimer);
+    clearInterval(roomEmitTimer);
     clearInterval(stockSimulatorTimer);
     if (ws) {
       ws.removeAllListeners();
@@ -359,4 +399,4 @@ export function initBinanceSocket(io) {
   };
 }
 
-export default { initBinanceSocket, getLatestPrices, getPriceHistory };
+export default { initBinanceSocket, getLatestPrices, getPriceHistory, updatePrice, addActiveRoom, removeActiveRoom, getMemoryStats };

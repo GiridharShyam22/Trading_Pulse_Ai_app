@@ -9,8 +9,9 @@ import tradeRoutes from "./routes/tradeRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
-import { initBinanceSocket, getLatestPrices, getPriceHistory } from "./services/binanceSocket.js";
+import { initBinanceSocket, getLatestPrices, getPriceHistory, addActiveRoom, removeActiveRoom, getMemoryStats } from "./services/binanceSocket.js";
 import { initNewsService, getRecentNews } from "./services/newsService.js";
+import { initFinnhubService } from "./services/finnhubService.js";
 import User from "./models/User.js";
 
 // ── Load environment variables ──────────────────────────────────
@@ -67,8 +68,32 @@ io.on("connection", (socket) => {
     });
   }
 
+  // ── On-Demand: Subscribe to a specific asset's room ──────────
+  socket.on("subscribe_asset", (symbol) => {
+    if (!symbol || typeof symbol !== "string") return;
+    const room = `room:${symbol.toUpperCase()}`;
+    socket.join(room);
+    addActiveRoom(symbol.toUpperCase());
+    console.log(`[Socket.io] ${socket.id} subscribed to ${room}`);
+  });
+
+  // ── On-Demand: Unsubscribe from an asset's room ──────────────
+  socket.on("unsubscribe_asset", (symbol) => {
+    if (!symbol || typeof symbol !== "string") return;
+    const room = `room:${symbol.toUpperCase()}`;
+    socket.leave(room);
+    // Only remove active room if no one else is watching
+    const roomMembers = io.sockets.adapter.rooms.get(room);
+    if (!roomMembers || roomMembers.size === 0) {
+      removeActiveRoom(symbol.toUpperCase());
+    }
+    console.log(`[Socket.io] ${socket.id} unsubscribed from ${room}`);
+  });
+
   socket.on("disconnect", (reason) => {
     console.log(`[Socket.io] Client disconnected: ${socket.id} (${reason})`);
+    // Clean up rooms — Socket.io handles leave automatically,
+    // but we need to check if any rooms are now empty
   });
 });
 
@@ -111,6 +136,14 @@ app.get("/api/news", (req, res) => {
   res.status(200).json({
     success: true,
     data: getRecentNews(),
+  });
+});
+
+// Memory stats endpoint (for debugging on Render)
+app.get("/api/debug/memory", (req, res) => {
+  res.status(200).json({
+    success: true,
+    data: getMemoryStats(),
   });
 });
 
@@ -159,6 +192,9 @@ async function startServer() {
     // Initialize Binance WebSocket and wire to Socket.io
     const cleanupBinance = initBinanceSocket(io);
 
+    // Initialize Finnhub WebSocket for real US stock data
+    const cleanupFinnhub = initFinnhubService();
+
     // Initialize News Service
     const cleanupNews = initNewsService(io);
 
@@ -176,6 +212,7 @@ async function startServer() {
     const shutdown = async (signal) => {
       console.log(`\n[Server] ${signal} received. Shutting down gracefully...`);
       cleanupBinance();
+      cleanupFinnhub();
       cleanupNews();
       io.close();
       server.close();

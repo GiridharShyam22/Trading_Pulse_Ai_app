@@ -44,6 +44,8 @@ export function initNewsService(io) {
   const symbolsMap = {
     BTCUSDT: { name: "Bitcoin", ticker: "BTC" },
     ETHUSDT: { name: "Ethereum", ticker: "ETH" },
+    BNBUSDT: { name: "Binance Coin", ticker: "BNB" },
+    SOLUSDT: { name: "Solana", ticker: "SOL" },
     AAPL: { name: "Apple Inc.", ticker: "AAPL" },
     MSFT: { name: "Microsoft Corp.", ticker: "MSFT" },
     GOOGL: { name: "Alphabet Inc.", ticker: "GOOGL" },
@@ -52,6 +54,14 @@ export function initNewsService(io) {
     NVDA: { name: "NVIDIA Corp.", ticker: "NVDA" },
     META: { name: "Meta Platforms", ticker: "META" },
     NFLX: { name: "Netflix Inc.", ticker: "NFLX" },
+    AMD: { name: "Advanced Micro Devices", ticker: "AMD" },
+    PLTR: { name: "Palantir Technologies", ticker: "PLTR" },
+    COIN: { name: "Coinbase Global", ticker: "COIN" },
+    RELIANCE: { name: "Reliance Industries", ticker: "RELIANCE" },
+    TCS: { name: "Tata Consultancy Services", ticker: "TCS" },
+    HDFCBANK: { name: "HDFC Bank", ticker: "HDFCBANK" },
+    INFY: { name: "Infosys", ticker: "INFY" },
+    SBIN: { name: "State Bank of India", ticker: "SBIN" },
   };
 
   const keys = Object.keys(symbolsMap);

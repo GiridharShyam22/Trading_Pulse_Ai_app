@@ -86,13 +86,15 @@ export default function App() {
 function TradingDashboard({ authUser, setAuthUser, authToken, onLogout }) {
   const [live, setLive] = useState(socket.connected);
   const [asset, setAsset] = useState('BTCUSDT');
-  const [history, setHistory] = useState({
-    BTCUSDT: [], ETHUSDT: [], AAPL: [], MSFT: [], GOOGL: [], AMZN: [], TSLA: [], NVDA: [], META: [], NFLX: []
+  const [history, setHistory] = useState(() => {
+    const init = {};
+    Object.keys(ASSETS).forEach(sym => init[sym] = []);
+    return init;
   });
-  const [latest, setLatest] = useState({
-    BTCUSDT: { price: 0 }, ETHUSDT: { price: 0 },
-    AAPL: { price: 0 }, MSFT: { price: 0 }, GOOGL: { price: 0 }, AMZN: { price: 0 },
-    TSLA: { price: 0 }, NVDA: { price: 0 }, META: { price: 0 }, NFLX: { price: 0 }
+  const [latest, setLatest] = useState(() => {
+    const init = {};
+    Object.keys(ASSETS).forEach(sym => init[sym] = { price: 0 });
+    return init;
   });
   const [userId, setUserId] = useState(authUser?.id || null);
   const [balance, setBalance] = useState(authUser?.balance || 100000);
@@ -250,23 +252,34 @@ function TradingDashboard({ authUser, setAuthUser, authToken, onLogout }) {
 
   /* ── Socket.io ───────────────────────────────────────────── */
   useEffect(() => {
-    const onC = () => setLive(true);
+    const onC = () => {
+      setLive(true);
+      // Subscribe to the currently active asset on connect
+      socket.emit("subscribe_asset", asset);
+    };
     const onD = () => setLive(false);
 
-    const onUpdate = (data) => {
+    // market_update is now just a lightweight ticker tape (prices only, no history)
+    const onMarketUpdate = (data) => {
       if (!data?.prices) return;
-      setLatest(data.prices);
+      setLatest((prev) => ({ ...prev, ...data.prices }));
+    };
+
+    // asset_update is the room-based detailed feed for the watched asset
+    const onAssetUpdate = (data) => {
+      if (!data?.symbol) return;
+      
+      setLatest((prev) => ({
+        ...prev,
+        [data.symbol]: { price: data.price, timestamp: data.timestamp, volume24h: data.volume24h }
+      }));
 
       setHistory((prev) => {
         const next = { ...prev };
-        for (const s of Object.keys(data.prices)) {
-          if (data.prices[s]?.price > 0) {
-            next[s] = [...(prev[s] || []), {
-              price: data.prices[s].price,
-              timestamp: data.prices[s].timestamp || data.timestamp,
-            }].slice(-MAX_HIST);
-          }
-        }
+        next[data.symbol] = [...(prev[data.symbol] || []), {
+          price: data.price,
+          timestamp: data.timestamp,
+        }].slice(-MAX_HIST);
         return next;
       });
 
@@ -309,15 +322,25 @@ function TradingDashboard({ authUser, setAuthUser, authToken, onLogout }) {
 
     socket.on('connect', onC);
     socket.on('disconnect', onD);
-    socket.on('market_update', onUpdate);
+    socket.on('market_update', onMarketUpdate);
+    socket.on('asset_update', onAssetUpdate);
     socket.on('news_flash', onNewsFlash);
     socket.on('portfolio_update', onPortfolioUpdate);
     socket.on('order_liquidated', onOrderLiquidated);
 
+    // Subscribe to new asset when `asset` state changes
+    if (socket.connected) {
+      socket.emit("subscribe_asset", asset);
+    }
+
     return () => {
+      // Unsubscribe from old asset on cleanup
+      socket.emit("unsubscribe_asset", asset);
+      
       socket.off('connect', onC);
       socket.off('disconnect', onD);
-      socket.off('market_update', onUpdate);
+      socket.off('market_update', onMarketUpdate);
+      socket.off('asset_update', onAssetUpdate);
       socket.off('news_flash', onNewsFlash);
       socket.off('portfolio_update', onPortfolioUpdate);
       socket.off('order_liquidated', onOrderLiquidated);
