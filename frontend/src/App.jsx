@@ -15,6 +15,8 @@ const AI_INTERVAL = 10;
 export const ASSETS = {
   BTCUSDT: { symbol: 'BTCUSDT', name: 'Bitcoin', prefix: '₿', type: 'Crypto', color: '#f59e0b', base: 'USDT' },
   ETHUSDT: { symbol: 'ETHUSDT', name: 'Ethereum', prefix: 'Ξ', type: 'Crypto', color: '#6366f1', base: 'USDT' },
+  BNBUSDT: { symbol: 'BNBUSDT', name: 'Binance Coin', prefix: 'BNB', type: 'Crypto', color: '#f5a524', base: 'USDT' },
+  SOLUSDT: { symbol: 'SOLUSDT', name: 'Solana', prefix: 'SOL', type: 'Crypto', color: '#14b8a6', base: 'USDT' },
   AAPL: { symbol: 'AAPL', name: 'Apple Inc.', prefix: '₹', type: 'Stock', color: '#a3a3a3', base: 'USD' },
   MSFT: { symbol: 'MSFT', name: 'Microsoft Corp.', prefix: '₹', type: 'Stock', color: '#0ea5e9', base: 'USD' },
   GOOGL: { symbol: 'GOOGL', name: 'Alphabet Inc.', prefix: '₹', type: 'Stock', color: 'var(--accent-red)', base: 'USD' },
@@ -23,6 +25,14 @@ export const ASSETS = {
   NVDA: { symbol: 'NVDA', name: 'NVIDIA Corp.', prefix: '₹', type: 'Stock', color: '#22c55e', base: 'USD' },
   META: { symbol: 'META', name: 'Meta Platforms', prefix: '₹', type: 'Stock', color: '#3b82f6', base: 'USD' },
   NFLX: { symbol: 'NFLX', name: 'Netflix Inc.', prefix: '₹', type: 'Stock', color: '#dc2626', base: 'USD' },
+  AMD: { symbol: 'AMD', name: 'Advanced Micro Devices', prefix: '₹', type: 'Stock', color: '#ef4444', base: 'USD' },
+  PLTR: { symbol: 'PLTR', name: 'Palantir Tech', prefix: '₹', type: 'Stock', color: '#94a3b8', base: 'USD' },
+  COIN: { symbol: 'COIN', name: 'Coinbase Global', prefix: '₹', type: 'Stock', color: '#0ea5e9', base: 'USD' },
+  RELIANCE: { symbol: 'RELIANCE', name: 'Reliance Ind.', prefix: '₹', type: 'Stock', color: '#0ea5e9', base: 'INR' },
+  TCS: { symbol: 'TCS', name: 'Tata Consultancy', prefix: '₹', type: 'Stock', color: '#6366f1', base: 'INR' },
+  HDFCBANK: { symbol: 'HDFCBANK', name: 'HDFC Bank', prefix: '₹', type: 'Stock', color: '#dc2626', base: 'INR' },
+  INFY: { symbol: 'INFY', name: 'Infosys', prefix: '₹', type: 'Stock', color: '#3b82f6', base: 'INR' },
+  SBIN: { symbol: 'SBIN', name: 'State Bank of India', prefix: '₹', type: 'Stock', color: '#0284c7', base: 'INR' },
 };
 
 export default function App() {

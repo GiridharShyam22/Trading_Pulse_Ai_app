@@ -20,12 +20,14 @@ import { getActiveSentiment } from "./newsService.js";
  */
 
 const BINANCE_WS_URL =
-  "wss://stream.binance.com:9443/ws/btcusdt@trade/ethusdt@trade";
+  "wss://stream.binance.com:9443/ws/btcusdt@trade/ethusdt@trade/bnbusdt@trade/solusdt@trade";
 
 // In-memory price store for latest prices (crypto + stocks)
 const latestPrices = {
   BTCUSDT: { price: 0, timestamp: 0, volume24h: 0 },
   ETHUSDT: { price: 0, timestamp: 0, volume24h: 0 },
+  BNBUSDT: { price: 0, timestamp: 0, volume24h: 0 },
+  SOLUSDT: { price: 0, timestamp: 0, volume24h: 0 },
   AAPL: { price: 185.50, timestamp: 0, volume24h: 0 },
   MSFT: { price: 415.20, timestamp: 0, volume24h: 0 },
   GOOGL: { price: 172.30, timestamp: 0, volume24h: 0 },
@@ -34,12 +36,22 @@ const latestPrices = {
   NVDA: { price: 920.80, timestamp: 0, volume24h: 0 },
   META: { price: 495.60, timestamp: 0, volume24h: 0 },
   NFLX: { price: 610.15, timestamp: 0, volume24h: 0 },
+  AMD: { price: 160.20, timestamp: 0, volume24h: 0 },
+  PLTR: { price: 22.45, timestamp: 0, volume24h: 0 },
+  COIN: { price: 200.15, timestamp: 0, volume24h: 0 },
+  RELIANCE: { price: 2900.50, timestamp: 0, volume24h: 0 },
+  TCS: { price: 3800.20, timestamp: 0, volume24h: 0 },
+  HDFCBANK: { price: 1500.10, timestamp: 0, volume24h: 0 },
+  INFY: { price: 1400.30, timestamp: 0, volume24h: 0 },
+  SBIN: { price: 800.50, timestamp: 0, volume24h: 0 },
 };
 
 // Price history buffers for AI predictions (kept in memory)
 const priceHistory = {
   BTCUSDT: [],
   ETHUSDT: [],
+  BNBUSDT: [],
+  SOLUSDT: [],
   AAPL: [],
   MSFT: [],
   GOOGL: [],
@@ -48,6 +60,14 @@ const priceHistory = {
   NVDA: [],
   META: [],
   NFLX: [],
+  AMD: [],
+  PLTR: [],
+  COIN: [],
+  RELIANCE: [],
+  TCS: [],
+  HDFCBANK: [],
+  INFY: [],
+  SBIN: [],
 };
 
 const MAX_HISTORY_LENGTH = 200;
@@ -83,6 +103,8 @@ function prefillHistory(symbol, basePrice) {
 function prefillAllHistory() {
   prefillHistory("BTCUSDT", 67500);
   prefillHistory("ETHUSDT", 3450);
+  prefillHistory("BNBUSDT", 600.50);
+  prefillHistory("SOLUSDT", 150.25);
   prefillHistory("AAPL", 185.50);
   prefillHistory("MSFT", 415.20);
   prefillHistory("GOOGL", 172.30);
@@ -91,6 +113,14 @@ function prefillAllHistory() {
   prefillHistory("NVDA", 920.80);
   prefillHistory("META", 495.60);
   prefillHistory("NFLX", 610.15);
+  prefillHistory("AMD", 160.20);
+  prefillHistory("PLTR", 22.45);
+  prefillHistory("COIN", 200.15);
+  prefillHistory("RELIANCE", 2900.50);
+  prefillHistory("TCS", 3800.20);
+  prefillHistory("HDFCBANK", 1500.10);
+  prefillHistory("INFY", 1400.30);
+  prefillHistory("SBIN", 800.50);
 }
 
 prefillAllHistory();
@@ -284,7 +314,7 @@ export function initBinanceSocket(io) {
 
   // Stock simulator timer
   const stockSimulatorTimer = setInterval(() => {
-    const stockSymbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX"];
+    const stockSymbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX", "AMD", "PLTR", "COIN", "RELIANCE", "TCS", "HDFCBANK", "INFY", "SBIN"];
     const timestamp = Date.now();
 
     stockSymbols.forEach((symbol) => {
