@@ -67,9 +67,9 @@ export const executeTrade = async (req, res) => {
       });
     }
 
-    const normalizedSymbol = symbol.toUpperCase().trim();
+    const normalizedSymbol = symbol.toUpperCase().trim().replace('/', '');
     const validSymbols = [
-      "BTCUSDT", "ETHUSDT",
+      "BTCUSDT", "ETHUSDT", "ATOMUSDT",
       "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX"
     ];
     if (!validSymbols.includes(normalizedSymbol)) {

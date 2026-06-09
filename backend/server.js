@@ -150,7 +150,8 @@ app.get("/api/prices/:symbol", async (req, res) => {
 // Endpoint for AI Engine proxy to bypass CORS
 app.post("/api/ai/predict", async (req, res) => {
   try {
-    const aiResponse = await fetch("https://trading-pulse-ai-app.onrender.com/predict", {
+    const aiUrl = process.env.AI_ENGINE_URL || "http://127.0.0.1:8000";
+    const aiResponse = await fetch(`${aiUrl}/predict`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(req.body)
