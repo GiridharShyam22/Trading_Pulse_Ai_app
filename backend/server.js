@@ -1,3 +1,5 @@
+console.log("[Init] Booting server.js...");
+
 import express from "express";
 import http from "http";
 import { Server as SocketIOServer } from "socket.io";
@@ -164,10 +166,19 @@ app.get("/api/debug/memory", (req, res) => {
 // ── MongoDB connection & server start ───────────────────────────
 async function startServer() {
   try {
+    // Start HTTP server FIRST so Render port scanner doesn't time out
+    server.listen(PORT, "0.0.0.0", () => {
+      console.log(`\n${"═".repeat(55)}`);
+      console.log(`  🚀 Trading Dashboard Backend`);
+      console.log(`  📡 Server:    http://0.0.0.0:${PORT}`);
+      console.log(`  🔌 Socket.io: ws://0.0.0.0:${PORT}`);
+      console.log(`${"═".repeat(55)}\n`);
+    });
+
     // Connect to MongoDB
     console.log("[MongoDB] Connecting...");
     await mongoose.connect(MONGODB_URI);
-    console.log("[MongoDB] ✅ Connected to", MONGODB_URI);
+    console.log("[MongoDB] ✅ Connected to MongoDB");
 
     // Force update or create the admin user to ensure correct credentials
     const adminEmail = "giridharsyamsamsani@gmail.com";
@@ -211,16 +222,6 @@ async function startServer() {
 
     // Initialize News Service
     const cleanupNews = initNewsService(io);
-
-    // Start HTTP server
-    server.listen(PORT, () => {
-      console.log(`\n${"═".repeat(55)}`);
-      console.log(`  🚀 Trading Dashboard Backend`);
-      console.log(`  📡 Server:    http://localhost:${PORT}`);
-      console.log(`  🔌 Socket.io: ws://localhost:${PORT}`);
-      console.log(`  📊 Binance:   Live BTC/ETH stream active`);
-      console.log(`${"═".repeat(55)}\n`);
-    });
 
     // Graceful shutdown
     const shutdown = async (signal) => {
