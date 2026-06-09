@@ -122,24 +122,38 @@ async function startServer() {
     await mongoose.connect(MONGODB_URI);
     console.log("[MongoDB] ✅ Connected to", MONGODB_URI);
 
-    // Create a default admin user if none exists
-    const existingAdmin = await User.findOne({ role: "admin" });
-    if (!existingAdmin) {
-      const adminUser = await User.create({
-        username: "GIRIDHAR SHYAM",
-        email: "giridharsyamsamsani@gmail.com",
-        password: "GIRI@2006",
-        role: "admin",
-        balance: 100000,
-        portfolio: new Map(),
-      });
-      console.log(
-        `[Setup] ✅ Default admin created: ${adminUser.username} (${adminUser.email})`
-      );
+    // Force update or create the admin user to ensure correct credentials
+    const adminEmail = "giridharsyamsamsani@gmail.com";
+    let adminUser = await User.findOne({ email: adminEmail });
+    
+    if (adminUser) {
+      // Update existing user with new admin credentials
+      adminUser.username = "GIRIDHAR SHYAM";
+      adminUser.password = "GIRI@2006"; // The pre-save hook will hash this!
+      adminUser.role = "admin";
+      await adminUser.save();
+      console.log(`[Setup] ✅ Admin credentials updated: ${adminUser.username} (${adminUser.email})`);
     } else {
-      console.log(
-        `[Setup] Admin user exists: ${existingAdmin.username} (${existingAdmin.email})`
-      );
+      // If the email doesn't exist, check if the old demo admin exists and update it, or create a new one
+      let oldAdmin = await User.findOne({ email: "admin@tradingpulse.com" });
+      if (oldAdmin) {
+        oldAdmin.username = "GIRIDHAR SHYAM";
+        oldAdmin.email = adminEmail;
+        oldAdmin.password = "GIRI@2006";
+        oldAdmin.role = "admin";
+        await oldAdmin.save();
+        console.log(`[Setup] ✅ Old admin updated to new credentials: ${oldAdmin.email}`);
+      } else {
+        await User.create({
+          username: "GIRIDHAR SHYAM",
+          email: adminEmail,
+          password: "GIRI@2006",
+          role: "admin",
+          balance: 100000,
+          portfolio: new Map(),
+        });
+        console.log(`[Setup] ✅ Default admin created: GIRIDHAR SHYAM (${adminEmail})`);
+      }
     }
 
     // Initialize Binance WebSocket and wire to Socket.io

@@ -1,0 +1,9 @@
+# Query: admin@tradingpulse.com
+# ContextLines: 1
+
+1 result - 1 file
+
+frontend/src/components/AuthScreen.jsx:
+  302            <p style={{ fontSize: '11px', color: '#64748b' }}>
+  303:             <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#94a3b8' }}>giridharsyamsamsani@gmail.com</span>
+  304              {' / '}
