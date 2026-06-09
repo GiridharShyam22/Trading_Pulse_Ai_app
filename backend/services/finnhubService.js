@@ -1,5 +1,5 @@
 import WebSocket from "ws";
-import { updatePrice } from "./binanceSocket.js";
+import { updatePrice, FINNHUB_SYMBOLS } from "./binanceSocket.js";
 
 /**
  * Finnhub WebSocket Service
@@ -19,10 +19,6 @@ import { updatePrice } from "./binanceSocket.js";
  * }
  */
 
-const US_STOCK_SYMBOLS = [
-  "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA",
-  "NVDA", "META", "NFLX", "AMD", "PLTR", "COIN",
-];
 
 let ws = null;
 let reconnectTimer = null;
@@ -52,10 +48,10 @@ export function initFinnhubService() {
       reconnectAttempts = 0;
 
       // Subscribe to all US stock symbols
-      for (const symbol of US_STOCK_SYMBOLS) {
+      for (const symbol of FINNHUB_SYMBOLS) {
         ws.send(JSON.stringify({ type: "subscribe", symbol }));
       }
-      console.log(`[FinnhubWS] Subscribed to: ${US_STOCK_SYMBOLS.join(", ")}`);
+      console.log(`[FinnhubWS] Subscribed to ${FINNHUB_SYMBOLS.length} symbols`);
     });
 
     ws.on("message", (raw) => {
@@ -70,7 +66,7 @@ export function initFinnhubService() {
           const volume = trade.v || 1;
 
           // Skip unknown symbols
-          if (!US_STOCK_SYMBOLS.includes(symbol)) continue;
+          if (!FINNHUB_SYMBOLS.includes(symbol)) continue;
 
           // Throttle: max 1 update per symbol per second
           const now = Date.now();
@@ -110,7 +106,7 @@ export function initFinnhubService() {
     if (ws) {
       // Unsubscribe from all symbols before closing
       try {
-        for (const symbol of US_STOCK_SYMBOLS) {
+        for (const symbol of FINNHUB_SYMBOLS) {
           ws.send(JSON.stringify({ type: "unsubscribe", symbol }));
         }
       } catch {

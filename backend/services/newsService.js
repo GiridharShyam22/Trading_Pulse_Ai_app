@@ -1,5 +1,5 @@
-// newsService.js
 // Simulates financial news events and tracks asset sentiment.
+import { ALL_SYMBOLS } from "./binanceSocket.js";
 
 const NEWS_TEMPLATES = {
   positive: [
@@ -41,34 +41,10 @@ export function getRecentNews() {
 }
 
 export function initNewsService(io) {
-  const symbolsMap = {
-    BTCUSDT: { name: "Bitcoin", ticker: "BTC" },
-    ETHUSDT: { name: "Ethereum", ticker: "ETH" },
-    BNBUSDT: { name: "Binance Coin", ticker: "BNB" },
-    SOLUSDT: { name: "Solana", ticker: "SOL" },
-    AAPL: { name: "Apple Inc.", ticker: "AAPL" },
-    MSFT: { name: "Microsoft Corp.", ticker: "MSFT" },
-    GOOGL: { name: "Alphabet Inc.", ticker: "GOOGL" },
-    AMZN: { name: "Amazon.com Inc.", ticker: "AMZN" },
-    TSLA: { name: "Tesla Inc.", ticker: "TSLA" },
-    NVDA: { name: "NVIDIA Corp.", ticker: "NVDA" },
-    META: { name: "Meta Platforms", ticker: "META" },
-    NFLX: { name: "Netflix Inc.", ticker: "NFLX" },
-    AMD: { name: "Advanced Micro Devices", ticker: "AMD" },
-    PLTR: { name: "Palantir Technologies", ticker: "PLTR" },
-    COIN: { name: "Coinbase Global", ticker: "COIN" },
-    RELIANCE: { name: "Reliance Industries", ticker: "RELIANCE" },
-    TCS: { name: "Tata Consultancy Services", ticker: "TCS" },
-    HDFCBANK: { name: "HDFC Bank", ticker: "HDFCBANK" },
-    INFY: { name: "Infosys", ticker: "INFY" },
-    SBIN: { name: "State Bank of India", ticker: "SBIN" },
-  };
-
-  const keys = Object.keys(symbolsMap);
-
   function generateNewsFlash() {
-    const symbol = keys[Math.floor(Math.random() * keys.length)];
-    const asset = symbolsMap[symbol];
+    const symbol = ALL_SYMBOLS[Math.floor(Math.random() * ALL_SYMBOLS.length)];
+    const ticker = symbol.replace('USDT', '');
+    const name = ticker; // Fallback to ticker name
     
     // Choose sentiment
     const r = Math.random();
@@ -78,7 +54,7 @@ export function initNewsService(io) {
 
     // Fill templates variables
     const percent = (Math.random() * 15 + 2).toFixed(1);
-    headline = headline.replace(/{name}/g, asset.name).replace(/{percent}/g, percent);
+    headline = headline.replace(/{name}/g, name).replace(/{percent}/g, percent);
 
     const score = sentiment === "positive" ? 1.0 : sentiment === "negative" ? -1.0 : 0.0;
     
@@ -92,7 +68,7 @@ export function initNewsService(io) {
     const newsItem = {
       id: Math.random().toString(36).substr(2, 9),
       symbol,
-      ticker: asset.ticker,
+      ticker,
       headline,
       sentiment,
       timestamp: Date.now(),

@@ -13,6 +13,7 @@ import { initBinanceSocket, getLatestPrices, getPriceHistory, addActiveRoom, rem
 import { initNewsService, getRecentNews } from "./services/newsService.js";
 import { initFinnhubService } from "./services/finnhubService.js";
 import User from "./models/User.js";
+import Tick from "./models/Tick.js";
 
 // ── Load environment variables ──────────────────────────────────
 dotenv.config();
@@ -114,21 +115,34 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// Endpoint for AI engine — get price history for a symbol
-app.get("/api/prices/:symbol", (req, res) => {
-  const symbol = req.params.symbol.toUpperCase();
-  const count = parseInt(req.query.count) || 50;
-  const history = getPriceHistory(symbol, count);
+// Endpoint for AI engine & UI — get price history for a symbol from Database
+app.get("/api/prices/:symbol", async (req, res) => {
+  try {
+    const symbol = req.params.symbol.toUpperCase();
+    const count = parseInt(req.query.count) || 50;
+    
+    // Query MongoDB Time Series: Get latest N ticks, sorted newest to oldest
+    const ticks = await Tick.find({ symbol })
+      .sort({ timestamp: -1 })
+      .limit(count)
+      .lean();
+    
+    // Reverse so it's oldest to newest for the chart
+    ticks.reverse();
 
-  res.status(200).json({
-    success: true,
-    data: {
-      symbol,
-      prices: history.map((p) => p.price),
-      timestamps: history.map((p) => p.timestamp),
-      count: history.length,
-    },
-  });
+    res.status(200).json({
+      success: true,
+      data: {
+        symbol,
+        prices: ticks.map((t) => t.price),
+        timestamps: ticks.map((t) => new Date(t.timestamp).getTime()),
+        count: ticks.length,
+      },
+    });
+  } catch (error) {
+    console.error(`[API] Error fetching history for ${req.params.symbol}:`, error.message);
+    res.status(500).json({ success: false, error: "Failed to fetch price history" });
+  }
 });
 
 // Endpoint for recent news
