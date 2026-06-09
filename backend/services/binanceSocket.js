@@ -240,10 +240,17 @@ async function prefillMissingHistory() {
     console.log("[DB] Checking for missing history across all symbols...");
     const symbolsWithNoData = [];
     
-    // Quick check to see which symbols have no data
+    // Quick check to see which symbols have no data, and load latest price for those that do
     for (const symbol of ALL_SYMBOLS) {
-      const existing = await Tick.findOne({ symbol }).select('_id').lean();
-      if (!existing) symbolsWithNoData.push(symbol);
+      const existing = await Tick.findOne({ symbol }).sort({ timestamp: -1 }).lean();
+      if (!existing) {
+        symbolsWithNoData.push(symbol);
+      } else {
+        // Essential! If the DB has data, we MUST load the last known price into memory,
+        // otherwise the simulator multiplies 0 by random factors and gets 0 forever!
+        latestPrices[symbol].price = existing.price;
+        latestPrices[symbol].timestamp = new Date(existing.timestamp).getTime();
+      }
     }
 
     if (symbolsWithNoData.length > 0) {
