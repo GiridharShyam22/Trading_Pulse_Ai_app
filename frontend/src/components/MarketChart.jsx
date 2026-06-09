@@ -559,9 +559,7 @@ function ZoomableAreaChart({ chartData, yDomain, color, symbol, showSMA, zoomHan
       ref={containerRef}
       style={{
         width: '100%',
-        flex: 1,
-        minHeight: 0,
-        minWidth: 0,
+        height: '100%',
         cursor: zoomHandlers?.isZoomed ? 'grab' : 'crosshair',
       }}
       onMouseDown={zoomHandlers?.handleMouseDown}
