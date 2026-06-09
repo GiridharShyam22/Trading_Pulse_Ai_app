@@ -215,7 +215,7 @@ async function startServer() {
     }
 
     // Initialize Binance WebSocket and wire to Socket.io
-    const cleanupBinance = initBinanceSocket(io);
+    const cleanupBinance = await initBinanceSocket(io);
 
     // Initialize Finnhub WebSocket for real US stock data
     const cleanupFinnhub = initFinnhubService();

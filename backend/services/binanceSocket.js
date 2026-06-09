@@ -241,15 +241,26 @@ async function prefillMissingHistory() {
     const symbolsWithNoData = [];
     
     // Quick check to see which symbols have no data, and load latest price for those that do
-    for (const symbol of ALL_SYMBOLS) {
-      const existing = await Tick.findOne({ symbol }).sort({ timestamp: -1 }).lean();
+    const checks = ALL_SYMBOLS.map(async (symbol) => {
+      const existing = await Tick.findOne({ symbol, price: { $gt: 0 } }).sort({ timestamp: -1 }).lean();
       if (!existing) {
-        symbolsWithNoData.push(symbol);
+        // Clean up any corrupted zero-price ticks silently
+        Tick.deleteMany({ symbol, price: { $lte: 0 } }).catch(() => {});
+        return { symbol, hasData: false };
+      }
+      return { symbol, hasData: true, existing };
+    });
+
+    const results = await Promise.all(checks);
+
+    for (const result of results) {
+      if (!result.hasData) {
+        symbolsWithNoData.push(result.symbol);
       } else {
         // Essential! If the DB has data, we MUST load the last known price into memory,
         // otherwise the simulator multiplies 0 by random factors and gets 0 forever!
-        latestPrices[symbol].price = existing.price;
-        latestPrices[symbol].timestamp = new Date(existing.timestamp).getTime();
+        latestPrices[result.symbol].price = result.existing.price;
+        latestPrices[result.symbol].timestamp = new Date(result.existing.timestamp).getTime();
       }
     }
 
@@ -322,9 +333,9 @@ export function getMemoryStats() {
 }
 
 // ── Main Init ───────────────────────────────────────────────────
-export function initBinanceSocket(io) {
+export async function initBinanceSocket(io) {
   
-  prefillMissingHistory();
+  await prefillMissingHistory();
 
   function triggerTickerEmit() {
     if (!pendingTicker) {
