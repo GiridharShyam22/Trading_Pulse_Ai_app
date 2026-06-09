@@ -13,10 +13,6 @@ const transactionSchema = new mongoose.Schema(
       required: true,
       uppercase: true,
       trim: true,
-      enum: [
-        "BTCUSDT", "ETHUSDT",
-        "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX"
-      ],
     },
     type: {
       type: String,
