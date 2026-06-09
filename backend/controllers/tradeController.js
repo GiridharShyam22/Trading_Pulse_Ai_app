@@ -68,16 +68,7 @@ export const executeTrade = async (req, res) => {
     }
 
     const normalizedSymbol = symbol.toUpperCase().trim().replace('/', '');
-    const validSymbols = [
-      "BTCUSDT", "ETHUSDT", "ATOMUSDT",
-      "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX"
-    ];
-    if (!validSymbols.includes(normalizedSymbol)) {
-      return res.status(400).json({
-        success: false,
-        error: `Invalid symbol. Supported: ${validSymbols.join(", ")}`,
-      });
-    }
+
 
     if (!["buy", "sell"].includes(type)) {
       return res.status(400).json({

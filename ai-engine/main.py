@@ -12,7 +12,8 @@ Endpoints:
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
+from contextlib import asynccontextmanager
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import IsolationForest
@@ -27,11 +28,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# ── Lifespan Manager (Modern Startup/Shutdown Handling) ──────────
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup Events
+    logger.info("=" * 55)
+    logger.info("  🧠 Trading AI Engine")
+    logger.info("  📡 Server:  http://localhost:8000")
+    logger.info("  📚 Docs:    http://localhost:8000/docs")
+    logger.info("=" * 55)
+    yield
+    # Shutdown Events
+    logger.info("[AI Engine] Shutting down...")
+
 # ── FastAPI app ──────────────────────────────────────────────────
 app = FastAPI(
     title="Trading AI Engine",
     description="Anomaly detection & trend prediction for crypto markets",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS — allow Node backend and React frontend
@@ -64,8 +79,9 @@ class PredictionRequest(BaseModel):
         description="Trading pair symbol (e.g., BTCUSDT, ETHUSDT)",
     )
 
-    @validator("prices")
-    def prices_must_be_positive(cls, v):
+    @field_validator("prices")
+    @classmethod
+    def prices_must_be_positive(cls, v: list[float]) -> list[float]:
         if any(p <= 0 for p in v):
             raise ValueError("All prices must be positive numbers")
         return v
@@ -107,56 +123,43 @@ def detect_anomaly(prices: list[float]) -> dict:
     Detect anomalies in price data using a dual approach:
       1. Isolation Forest (unsupervised ML)
       2. Z-Score statistical method
-
-    Returns anomaly detection results with scoring.
     """
     arr = np.array(prices)
     n = len(arr)
 
-    # ── Feature Engineering ──────────────────────────────────
-    # Create rolling features for Isolation Forest
+    # Feature Engineering
     df = pd.DataFrame({"price": arr})
-
-    # Rolling statistics (window = min(20, n//2))
     window = min(20, max(3, n // 2))
     df["rolling_mean"] = df["price"].rolling(window=window, min_periods=1).mean()
     df["rolling_std"] = df["price"].rolling(window=window, min_periods=1).std().fillna(0)
     df["returns"] = df["price"].pct_change().fillna(0)
     df["rolling_vol"] = df["returns"].rolling(window=window, min_periods=1).std().fillna(0)
-
-    # Price deviation from rolling mean
     df["deviation"] = (df["price"] - df["rolling_mean"]) / df["rolling_std"].replace(0, 1)
 
-    # ── Isolation Forest ─────────────────────────────────────
+    # Isolation Forest
     features = df[["price", "returns", "rolling_vol", "deviation"]].fillna(0).values
-
     iso_forest = IsolationForest(
         n_estimators=100,
-        contamination=0.1,  # Expect ~10% anomalies
+        contamination=0.1,
         random_state=42,
     )
     iso_forest.fit(features)
 
-    # Score the latest point (-1 = anomaly, 1 = normal)
     latest_features = features[-1:].reshape(1, -1)
     iso_prediction = iso_forest.predict(latest_features)[0]
     iso_score = iso_forest.score_samples(latest_features)[0]
 
-    # ── Z-Score Method ───────────────────────────────────────
+    # Z-Score Method
     mean_price = np.mean(arr)
     std_price = np.std(arr)
     z_score = (arr[-1] - mean_price) / std_price if std_price > 0 else 0.0
 
-    # Anomaly if Z-score > 2.5 OR Isolation Forest flags it
     z_score_anomaly = bool(abs(z_score) > 2.5)
     iso_anomaly = bool(iso_prediction == -1)
-
-    # Combined decision: anomaly if EITHER method flags it
     anomaly_detected = bool(z_score_anomaly or iso_anomaly)
 
-    # Confidence: weighted combination of both scores
-    z_confidence = min(float(abs(z_score)) / 4.0, 1.0)  # Normalize z-score to 0-1
-    iso_confidence = max(0.0, float(-iso_score))  # Higher negative = more anomalous
+    z_confidence = min(float(abs(z_score)) / 4.0, 1.0)
+    iso_confidence = max(0.0, float(-iso_score))
     combined_confidence = 0.4 * z_confidence + 0.6 * min(iso_confidence * 2, 1.0)
 
     return {
@@ -175,68 +178,51 @@ def detect_anomaly(prices: list[float]) -> dict:
 
 def predict_trend(prices: list[float]) -> dict:
     """
-    Predict market trend using Moving Average Crossover strategy:
-      - Short MA (5-period) vs Long MA (20-period)
-      - Momentum analysis
-      - Volatility assessment
-
-    Returns trend prediction with confidence and details.
+    Predict market trend using Moving Average Crossover strategy.
     """
     arr = np.array(prices)
     n = len(arr)
 
-    # ── Moving Averages ──────────────────────────────────────
     short_window = min(5, n)
     long_window = min(20, n)
 
     short_ma = float(np.mean(arr[-short_window:]))
     long_ma = float(np.mean(arr[-long_window:]))
 
-    # MA crossover signal
-    if short_ma > long_ma * 1.001:  # 0.1% threshold to avoid noise
+    if short_ma > long_ma * 1.001:
         ma_signal = "bullish"
     elif short_ma < long_ma * 0.999:
         ma_signal = "bearish"
     else:
         ma_signal = "neutral"
 
-    # ── Price Change ─────────────────────────────────────────
     lookback = min(10, n)
     price_change_pct = ((arr[-1] - arr[-lookback]) / arr[-lookback]) * 100
 
-    # ── Momentum (Rate of Change) ────────────────────────────
     returns = np.diff(arr) / arr[:-1] if n > 1 else np.array([0])
     recent_returns = returns[-min(5, len(returns)):]
-    momentum = float(np.mean(recent_returns)) * 100  # As percentage
-
-    # ── Volatility ───────────────────────────────────────────
+    momentum = float(np.mean(recent_returns)) * 100
     volatility = float(np.std(returns)) * 100 if len(returns) > 1 else 0.0
 
-    # ── Final Prediction ─────────────────────────────────────
-    # Weighted scoring: MA signal + momentum + price change
     bullish_signals = 0
     bearish_signals = 0
     total_signals = 3
 
-    # Signal 1: MA Crossover
     if ma_signal == "bullish":
         bullish_signals += 1
     elif ma_signal == "bearish":
         bearish_signals += 1
 
-    # Signal 2: Momentum
     if momentum > 0.05:
         bullish_signals += 1
     elif momentum < -0.05:
         bearish_signals += 1
 
-    # Signal 3: Recent price direction
     if price_change_pct > 0.1:
         bullish_signals += 1
     elif price_change_pct < -0.1:
         bearish_signals += 1
 
-    # Determine final trend
     if bullish_signals > bearish_signals:
         trend = "bullish"
         confidence = bullish_signals / total_signals
@@ -266,14 +252,7 @@ def predict_trend(prices: list[float]) -> dict:
 
 @app.post("/predict", response_model=PredictionResponse)
 async def predict(request: PredictionRequest):
-    """
-    Analyze time-series price data for anomalies and trend prediction.
-
-    Accepts a list of recent prices (minimum 10 data points) and returns:
-    - Whether an anomaly was detected in the latest price action
-    - A trend prediction (bullish / bearish / neutral)
-    - Confidence scores and detailed analysis metrics
-    """
+    """Analyze time-series price data for anomalies and trend prediction."""
     try:
         prices = request.prices
         symbol = request.symbol or "UNKNOWN"
@@ -283,16 +262,13 @@ async def predict(request: PredictionRequest):
             f"(range: ${min(prices):.2f} — ${max(prices):.2f})"
         )
 
-        # Run both analyses
         anomaly_result = detect_anomaly(prices)
         trend_result = predict_trend(prices)
 
-        # Combined confidence (average of both)
         combined_confidence = (
             anomaly_result["confidence"] + trend_result["confidence"]
         ) / 2
 
-        # Build summary string
         anomaly_status = "⚠️ ANOMALY DETECTED" if anomaly_result["anomaly_detected"] else "✅ Normal"
         trend_emoji = {
             "bullish": "📈",
@@ -341,21 +317,3 @@ async def health_check():
         "service": "Trading AI Engine",
         "version": "1.0.1",
     }
-
-
-# ── Startup / Shutdown Events ────────────────────────────────────
-
-@app.on_event("startup")
-async def startup_event():
-    logger.info("=" * 55)
-    logger.info("  🧠 Trading AI Engine")
-    logger.info("  📡 Server:  http://localhost:8000")
-    logger.info("  📚 Docs:    http://localhost:8000/docs")
-    logger.info("=" * 55)
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    logger.info("[AI Engine] Shutting down...")
-
-# Triggering a new deployment
