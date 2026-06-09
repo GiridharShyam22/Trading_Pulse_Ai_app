@@ -382,18 +382,21 @@ function TradingDashboard({ authUser, setAuthUser, authToken, onLogout }) {
   }, []);
 
   /* ── AI prediction ───────────────────────────────────────── */
-  const runAIForPrices = useCallback(async (symbol, prices) => {
-    if (!aiUp || prices.length < 10) return;
+  const runAIForPrices = useCallback(async (sym, p) => {
+    if (p.length < 10) return;
     setAiLoad(true);
     try {
-      const r = await axios.post(`${AI_URL}/predict`, {
-        prices: prices, symbol: symbol,
-      }, { timeout: 10000 });
+      const r = await axios.post(`${BACKEND}/api/ai/predict`, { symbol: sym, prices: p });
       setPred(r.data);
-      setAiTs(new Date().toISOString());
-    } catch { /* silent */ }
-    setAiLoad(false);
-  }, [aiUp]);
+      setAiUp(true);
+      setAiTs(Date.now());
+    } catch (e) {
+      console.warn('AI offline');
+      setAiUp(false);
+    } finally {
+      setAiLoad(false);
+    }
+  }, []);
 
   /* ── Fetch price history on asset change ─────────────────── */
   const fetchHistory = useCallback(async (symbol) => {

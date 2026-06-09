@@ -147,6 +147,23 @@ app.get("/api/prices/:symbol", async (req, res) => {
   }
 });
 
+// Endpoint for AI Engine proxy to bypass CORS
+app.post("/api/ai/predict", async (req, res) => {
+  try {
+    const aiResponse = await fetch("https://trading-pulse-ai-app.onrender.com/predict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req.body)
+    });
+    if (!aiResponse.ok) throw new Error("AI Engine returned error: " + aiResponse.statusText);
+    const data = await aiResponse.json();
+    res.status(200).json(data);
+  } catch (error) {
+    console.error("[AI Proxy Error]", error.message);
+    res.status(500).json({ anomaly_detected: false, trend_prediction: "neutral", confidence: 0, summary: "Engine offline", details: {} });
+  }
+});
+
 // Endpoint for recent news
 app.get("/api/news", (req, res) => {
   res.status(200).json({
