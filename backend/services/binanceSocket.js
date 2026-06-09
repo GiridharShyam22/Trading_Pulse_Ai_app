@@ -237,12 +237,21 @@ const finnhubActive = new Set();
 // ── Startup DB Seed ─────────────────────────────────────────────
 async function prefillMissingHistory() {
   try {
-    const count = await Tick.countDocuments();
-    if (count < 1000) {
-      console.log("[DB] Pre-filling empty database with simulated history...");
+    console.log("[DB] Checking for missing history across all symbols...");
+    const symbolsWithNoData = [];
+    
+    // Quick check to see which symbols have no data
+    for (const symbol of ALL_SYMBOLS) {
+      const existing = await Tick.findOne({ symbol }).select('_id').lean();
+      if (!existing) symbolsWithNoData.push(symbol);
+    }
+
+    if (symbolsWithNoData.length > 0) {
+      console.log(`[DB] Found ${symbolsWithNoData.length} symbols with no history. Pre-filling...`);
       const bulkOps = [];
       const now = Date.now();
-      for (const symbol of ALL_SYMBOLS) {
+      
+      for (const symbol of symbolsWithNoData) {
         let currentPrice = SYMBOLS_CONFIG[symbol].basePrice;
         let timestamp = now - 150 * 1000;
         for (let i = 0; i < 150; i++) {
@@ -265,6 +274,8 @@ async function prefillMissingHistory() {
         await Tick.insertMany(bulkOps.slice(i, i + chunkSize));
       }
       console.log(`[DB] Pre-fill complete. Inserted ${bulkOps.length} ticks.`);
+    } else {
+      console.log("[DB] All symbols have historical data.");
     }
   } catch (err) {
     console.error("[DB] Pre-fill failed:", err.message);
