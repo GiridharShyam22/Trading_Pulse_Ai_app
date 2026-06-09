@@ -9,7 +9,7 @@ import tradeRoutes from "./routes/tradeRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
-import { initBinanceSocket, getLatestPrices, getPriceHistory, addActiveRoom, removeActiveRoom, getMemoryStats } from "./services/binanceSocket.js";
+import { initBinanceSocket, getLatestPrices, addActiveRoom, removeActiveRoom, getMemoryStats } from "./services/binanceSocket.js";
 import { initNewsService, getRecentNews } from "./services/newsService.js";
 import { initFinnhubService } from "./services/finnhubService.js";
 import User from "./models/User.js";
